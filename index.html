@@ -4,90 +4,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atrapa en Pere!</title>
-    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"> -->
+    <title>Atrapa en Pere</title>
     <style>
-        #joc {
-            width: 100%;
-            height: 300px;
-            background-color: #EBEEFF;
-            position: relative;
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"/></svg>') 16 16, auto;
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
         }
 
-        #talp {
-            width: 75px;
-            height: 75px;
+        #game-container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            background-image: url('fonsJoc.jpg');
+            background-size: cover;
+        }
+
+        .hole-container {
             position: absolute;
+            width: 60px;
+            height: 60px;
+            overflow: hidden;
+        }
+
+        .hole {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://github.com/carlessp/atrapaEnPere/blob/main/forat.png?raw=true');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .mole {
+            position: absolute;
+            width: 100%;
+            height: 100%; /* Fem el talp més alt per tenir més espai per amagar-lo */
             background-image: url('https://imgs.search.brave.com/7ItaZU05HjGD5tC83qPxQTmj-km9kqKM3CqsgzJ4UMY/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly91cGxv/YWQud2lraW1lZGlh/Lm9yZy93aWtpcGVk/aWEvY29tbW9ucy9l/L2UzL1BlcmVfQmFy/bmlscy5qcGc');
             background-size: cover;
+            background-position: center top;
+            cursor: pointer;
             display: none;
-            border-radius: 50%;
+            transition: transform 0.1s;
+            z-index: 1;
+            bottom: -100%; /* Inicialment, el talp està completament amagat */
+            border-radius: 25% 25% 0 0;
         }
 
-        #puntuacio {
+        .mole.visible {
+            display: block;
+            animation: popUp 1s ease;
+        }
+
+        .fake-mole {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #8B4513;
+            cursor: pointer;
+            display: none;
+            border-radius: 25% 25% 0 0;
+            z-index: 1;
+            bottom: -100%;
+        }
+
+        .fake-mole.visible {
+            display: block;
+            animation: popUp 1s ease;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
             font-size: 24px;
-            margin-top: 20px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes popUp {
+            0% {
+                bottom: -100%;
+            }
+
+            100% {
+                bottom: 0%; /* Ajusta aquest valor per controlar quant surt el talp */
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="content" id="preJoc">
-        <h2>Atrapeu en Pere Barnils!</h2>
-        <div id="joc">
-            <div id="talp"></div>
-        </div>
-        <div id="puntuacio">Puntuació: <span id="punts">0</span></div>
+    <div id="game-container">
+        <div id="score">Puntuació: 0</div>
     </div>
 
-
     <script>
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        let score = 0;
+        const holes = [];
+        const numHoles = 12;
 
-        const audioMartell = new Audio('./martell.mp3');
-        // const audioMartell = new Audio('https://docs.google.com/uc?id=1U0DXQZJC_HXTph5KkmUHJgRlYaAfljED&export=download');
+        function createHoles() {
+            const holePositions = [
+                { x: 70, y: 140 }, { x: 270, y: 140 }, { x: 470, y: 140 },
+                { x: 70, y: 220 }, { x: 270, y: 220 }, { x: 470, y: 220 },
+                { x: 70, y: 300 }, { x: 270, y: 300 }, { x: 470, y: 300 },
+                { x: 170, y: 180 }, { x: 370, y: 180 }, { x: 170, y: 260 }
+            ];
 
-        // const audioMartell = new Audio ('http://sndup.net/zhzmr');
-        const joc = document.getElementById('joc');
-        const talp = document.getElementById('talp');
-        const puntsElement = document.getElementById('punts');
-        let punts = 0;
-        let talpVisible = false;
+            for (let i = 0; i < numHoles; i++) {
+                const holeContainer = document.createElement('div');
+                holeContainer.classList.add('hole-container');
+                holeContainer.style.left = `${holePositions[i].x}px`;
+                holeContainer.style.top = `${holePositions[i].y}px`;
 
-        function mostrarTalp() {
-            if (talpVisible) return;
+                const mole = document.createElement('div');
+                mole.classList.add('mole');
+                mole.addEventListener('click', hitMole);
 
-            const maxX = joc.clientWidth - 75;
-            const maxY = joc.clientHeight - 75;
-            const randomX = Math.floor(Math.random() * maxX);
-            const randomY = Math.floor(Math.random() * maxY);
+                const fakeMole = document.createElement('div');
+                fakeMole.classList.add('fake-mole');
+                fakeMole.addEventListener('click', hitFakeMole);
 
-            talp.style.left = `${randomX}px`;
-            talp.style.top = `${randomY}px`;
-            talp.style.display = 'block';
-            talpVisible = true;
+                const hole = document.createElement('div');
+                hole.classList.add('hole');
 
-            setTimeout(() => {
-                talp.style.display = 'none';
-                talpVisible = false;
-                setTimeout(mostrarTalp, Math.random() * 1000);
-            }, 1000);
+                holeContainer.appendChild(mole);
+                holeContainer.appendChild(fakeMole);
+                holeContainer.appendChild(hole);
+                gameContainer.appendChild(holeContainer);
+                holes.push({ holeContainer, mole, fakeMole });
+            }
         }
 
-        talp.addEventListener('click', () => {
-            if (talpVisible) {
-                punts += 10;
-                puntsElement.textContent = punts;
-                talp.style.display = 'none';
-                talpVisible = false;
-                audioMartell.play().catch(error => {
-                    console.error('Error playing audio:', error);
-                });
+        const martell = new Audio('martell.mp3')
+        const vidres = new Audio('vidres.mp3')
+        function hitMole() {
+            score++;
+            scoreDisplay.textContent = `Puntuació: ${score}`;
+            this.classList.remove('visible');
+            martell.play();
+        }
+
+        function hitFakeMole() {
+            score -= 2;
+            scoreDisplay.textContent = `Puntuació: ${score}`;
+            this.classList.remove('visible');
+            vidres.play();
+        }
+
+        function showMole() {
+            const randomHole = holes[Math.floor(Math.random() * holes.length)];
+            const isFakeMole = Math.random() < 0.3; // 30% de probabilitat de ser un fals talp
+
+            if (isFakeMole) {
+                randomHole.fakeMole.classList.add('visible');
+                setTimeout(() => {
+                    randomHole.fakeMole.classList.remove('visible');
+                }, 1000);
+            } else {
+                randomHole.mole.classList.add('visible');
+                setTimeout(() => {
+                    randomHole.mole.classList.remove('visible');
+                }, 1000);
             }
-        });
+        }
 
-        mostrarTalp();
-
+        createHoles();
+        setInterval(showMole, 1500);
     </script>
 </body>
 
